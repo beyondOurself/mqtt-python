@@ -73,11 +73,16 @@
   - 范围：`md5tool.py`
   - 验收：发出报文含 timestamp 与 sign
 
+- [x] MQTT-I-003 版本号自增打包
+  - 范围：`version.json` `app_version.py` `build_release.py` `build.bat` `mqtt_gui.py`
+  - 验收：每次 build build+1；产物 `MQTT发送工具_x.y.z.n.exe`；标题显示 v 号；dist 含 version.json
+
 - [x] MQTT-I-000 提供 v5 无控制台打包
-  - 范围：`mqtt_tool_v5.spec`
+  - 范围：`mqtt_tool_v5.spec`（已由 MQTT-I-003 取代）
   - 验收：`pyinstaller mqtt_tool_v5.spec` 产出无黑框 exe
 
 ## 变更记录（近 7 天）
 
+- 2026-09-08：版本自增打包（version.json / build_release.py / 四段式 exe 命名 / Windows 文件属性）
 - 2026-09-08：模版管理弹窗（CRUD/搜索/JSON 编辑/操作记录回撤/粘贴格式化）；多 Tab 分离收回；环境脚本；UI 改版；窗口自适应与滚动；文档同步 PRD/TECH_DESIGN/DESIGN/README
 - 2026-09-08：初始化 vibe-coding 文档；MQTT-D-001 完成；短连接任务号改为 MQTT-M-010

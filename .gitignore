@@ -15,3 +15,6 @@ dist/
 history.json
 session.json
 .commit_msg.txt
+.build_out.txt
+version_info.txt
+MQTT发送工具_*.spec

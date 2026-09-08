@@ -13,7 +13,7 @@
 ## 开发规范
 
 - 默认最小改动；优先改用户指定路径；不扩散无关重构。
-- 主路径：`mqtt_gui.py`、`mqtt_publish.py`、`md5tool.py`。勿把新逻辑堆进 `mqtt_publish_old.py` / `md5toolold.py`。
+- 主路径：`mqtt_gui.py`、`mqtt_publish.py`、`md5tool.py`。
 - Windows：Shell 用 PowerShell；路径用完整 Windows 路径或仓库相对路径。
 - 禁止提交 broker 口令、证书、`.env`。Password 不得写入 `history.json`，不得写进文档示例。
 - `md5sign` 的 timestamp 偏移（−4 分钟）与排序+紧凑 JSON 规则禁止无需求改动。
@@ -58,7 +58,8 @@
 - 改 UI 后对照 `DESIGN.md`；主窗与模版管理弹窗启动应显示完整或可见滚动条
 - 改模版管理后：列表有数据、粘贴 JSON 自动格式化、操作记录可选中回撤
 - 密钥与口令不可提交
-- 打包：双击或执行 `build.bat`（内部调用 `pyinstaller mqtt_tool_v5.spec`），将 `templates.json` 放 exe 同目录
+- 打包：执行 `build.bat`（内部 `build_release.py`：bump `version.json` → PyInstaller）；产物 `dist\MQTT发送工具_x.y.z.n.exe`；`templates.json` / `version.json` 须在 exe 同目录
+- **版本**：改 `major/minor/patch` 发大版；`build` 仅构建脚本自增，勿手改
 
 ## 注意事项
 

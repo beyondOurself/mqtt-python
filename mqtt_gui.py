@@ -10,6 +10,7 @@ import tkinter as tk
 import uuid
 from tkinter import messagebox, simpledialog, ttk
 
+from app_version import format_title as app_version_title
 from md5tool import md5sign
 from mqtt_publish import Mqttpub
 
@@ -1237,7 +1238,7 @@ class MqttToolApp:
         self.root = root
         self.parent_app = parent_app
         self._window_subtitle = window_subtitle
-        self.root.title("MQTT 发送工具")
+        self.root.title("MQTT 发送工具 %s" % app_version_title())
         self.root.geometry("1100x920")
         self.root.minsize(900, 680)
         self.root.configure(bg=C["canvas"])
@@ -1449,7 +1450,7 @@ class MqttToolApp:
         tk.Label(badge, text=_icon_text(IC["brand"], "M"), font=_icon_font(20), fg="#FFFFFF", bg=C["accent"]).pack(expand=True)
         title_block = tk.Frame(title_row, bg=C["header_bg"])
         title_block.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        tk.Label(title_block, text="MQTT 发送工具", font=C["hero"], fg=C["header_fg"], bg=C["header_bg"], anchor=tk.W).pack(fill=tk.X)
+        tk.Label(title_block, text="MQTT 发送工具 %s" % app_version_title(), font=C["hero"], fg=C["header_fg"], bg=C["header_bg"], anchor=tk.W).pack(fill=tk.X)
         self._subtitle_label = tk.Label(
             title_block,
             text=self._window_subtitle or "博享家设备上行 · 多窗口编辑 · 自动签名",

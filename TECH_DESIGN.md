@@ -17,7 +17,7 @@
 | UI | Tkinter + ttk |
 | MQTT | paho-mqtt（`paho.mqtt.client`） |
 | 签名 | 标准库 `hashlib.md5` |
-| 打包 | PyInstaller，入口 `mqtt_gui.py`，产物名 `mqtt_tool_v5` |
+| 打包 | PyInstaller 单文件，`build_release.py` 驱动；产物 `MQTT发送工具_{major}.{minor}.{patch}.{build}.exe` |
 | 运行环境 | Windows 10+ |
 
 不引入 Web 框架、不引入 Qt。
@@ -34,15 +34,17 @@ mqtt-python/
   run.bat              # 无 .venv 时先 setup，再启动 GUI
   dev.bat              # 开发热重载（dev_reload.py）
   dev_reload.py        # 监听 *.py 变更并重启窗口
-  build.bat            # 安装 dev 依赖 + PyInstaller
+  build.bat            # 安装 dev 依赖 + 调用 build_release.py
+  build_release.py     # bump build、生成 version_info、PyInstaller、拷 dist 资源
+  app_version.py       # 版本读写与格式化（GUI 标题 / exe 基名）
+  version.json         # 软件版本源（build 每次打包 +1）
   requirements.txt     # 运行时依赖（paho-mqtt）
   requirements-dev.txt # 打包依赖（pyinstaller）
-  mqtt_tool_v5.spec    # 当前打包
   templates.json       # 运行时模版（exe 旁或源码旁）
   history.json         # 连接历史
-  mqtt_publish_old.py  # 旧脚本，勿当主路径
-  md5toolold.py
-  mqtt_tool*.spec      # 历史 spec
+  session.json         # 会话状态（含密码，勿提交 git）
+  version_info.txt     # 构建时生成（gitignore）
+  .build_out.txt       # 构建产物路径（gitignore）
   build/ dist/         # 打包产物
 ```
 
@@ -119,7 +121,34 @@ JSON 对象，常见字段：`name`、`sn`、`muid`、`timestamp`、`version`、
 | `setup_env.py` | 创建 `.venv`；`pip install -r requirements.txt`；校验 tkinter / paho-mqtt / `md5tool` / `mqtt_publish` |
 | `run.bat` | 无 `.venv` 则 `setup.bat nopause`，再 `.venv\Scripts\python mqtt_gui.py` |
 | `dev.bat` | 同上，运行 `dev_reload.py` 热重载 |
-| `build.bat` | 同上，装 `requirements-dev.txt` 后 PyInstaller |
+| `build.bat` | 装 `requirements-dev.txt` 后执行 `build_release.py` |
+
+### 版本与打包
+
+**版本文件** `version.json`：
+
+```json
+{ "major": 1, "minor": 0, "patch": 0, "build": 0 }
+```
+
+| 字段 | 维护方式 |
+|------|----------|
+| `major` / `minor` / `patch` | 发版前手动改 |
+| `build` | `build_release.py` 每次打包前 `+1` 并写回 |
+
+**命名**：`app_version.format_full()` → `1.0.0.15`；exe 基名 `MQTT发送工具_1.0.0.15`。
+
+**`build_release.py` 流程**：
+
+1. `bump_build(version.json)`
+2. 生成 `version_info.txt`（Windows 属性：FileVersion / ProductVersion）
+3. `PyInstaller --windowed --onefile --name {exe_basename} --version-file version_info.txt mqtt_gui.py`
+4. 拷贝 `templates.json`、`version.json` 到 `dist\`
+5. 写入 `.build_out.txt`（完整 exe 路径）
+
+**运行时读版本**：`app_version.load_version_data()` 优先 exe 同目录 `version.json`，否则源码目录；`mqtt_gui.py` 标题栏显示 `v{major}.{minor}.{patch}.{build}`。
+
+**注意**：报文 JSON 内的 `version` 字段（如 `v2.0.0_1`）为**设备协议版本**，与软件 `version.json` 无关。
 
 **模块导入约束**：`md5tool.py` 顶层禁止 import `requests` / `paho`（仅 `__main__` 块可用），否则 `setup_env.py` 校验失败。
 
@@ -146,7 +175,7 @@ JSON 对象，常见字段：`name`、`sn`、`muid`、`timestamp`、`version`、
 
 - 连接失败：Host/端口/账号、防火墙、1883
 - 设备不认：签名未勾选、JSON 手改后 key 顺序、timestamp 偏移被改
-- exe 丢模版：`templates.json` 不在 exe 同目录
+- exe 丢模版 / 标题版本不对：`templates.json`、`version.json` 须在 exe 同目录（`build_release.py` 会自动拷到 dist）
 - 主题错设备：未开「模版 sn 跟随主题」，或 payload.sn 与主题末段不一致
 - 模版管理列表空白：检查弹窗是否 TclError（Frame 非法 pady）；或 `_reload_list` 是否在 UI 建完前被中断
 - 操作记录点不中：确认 `op_list` 与模版 `listbox` 均已 `exportselection=False`

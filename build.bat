@@ -16,10 +16,12 @@ if not exist "%PY%" (
 )
 
 "%PY%" -m pip install -q -r requirements-dev.txt
-"%PY%" -m PyInstaller --noconfirm mqtt_tool_v5.spec
-if exist dist\templates.json goto done
-if exist templates.json copy /Y templates.json dist\templates.json >nul
-:done
+"%PY%" build_release.py
+if errorlevel 1 (
+  echo 打包失败
+  pause
+  exit /b 1
+)
 echo.
-echo 产物: dist\mqtt_tool_v5.exe
+if exist .build_out.txt type .build_out.txt
 pause
