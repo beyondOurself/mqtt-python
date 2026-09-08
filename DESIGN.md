@@ -1,121 +1,111 @@
 # MQTT 发送工具
 
-Utilitarian lab bench: dense controls, monospace payload, system chrome. Built for operators who send device MQTT all day, not for marketing screens.
+Commercial operator desk: dark header, card sidebar, monospace payload, Segoe MDL2 icon accents. Built for internal MQTT uplink simulation, not marketing screens.
 
 ## Overview
 
-Internal Windows desktop client for simulating 博享家 device uplink JSON. Layout is a single stacked form: connection strip, topic, template, JSON editor, send options, log. Visual language follows stock ttk on Windows so it sits next to MQTTX and IDEs without a custom skin. Depth is flat: padding and grouping, not drop shadows. Primary accent is reserved for the Send action. Payload and log are the working surfaces; labels stay mute gray-blue.
+Internal Windows desktop client for 博享家 device uplink JSON. **主窗**：顶栏品牌 + 左栏连接/模版卡片（可滚动）+ 右栏多 Tab JSON 编辑 / 发送 / 日志。**模版管理**为独立 Toplevel 弹窗：左列表 + 右 JSON 编辑 + 操作记录。
 
 ## Colors
 
-- **Primary** (#0078D4): Send button emphasis if ttk themed; Windows accent equivalent
-- **Secondary** (#605E5C): Secondary actions (删 / 保存 / 另存为 / 重命名)
-- **Tertiary** (#107C10): Success log line intent (发送成功)
-- **Background** (#F3F3F3): Window / ttk Frame default
-- **Surface** (#FFFFFF): Combobox, Entry, Text editors
-- **Text** (#1A1A1A): Labels and body
-- **Muted** (#605E5C): Secondary labels (Host, Port, 主题, 模版)
-- **Success** (#107C10)
-- **Warning** (#9D5D00)
-- **Error** (#C42B1C): 发送失败, JSON 无效, messagebox error
-- **Info** (#0078D4)
-- **Log Bg** (#FFFFFF)
-- **Payload Fg** (#1A1A1A)
+- **Canvas** (#EEF2F6): 主背景
+- **Header Bg** (#0B1220): 顶栏
+- **Header Fg** (#F8FAFC): 顶栏标题
+- **Accent** (#2563EB): 主按钮、选中态、Tab 激活
+- **Accent Soft** (#DBEAFE): 图标徽章底
+- **Surface** (#FFFFFF): 卡片内容
+- **Surface Alt** (#F8FAFC): 输入框、列表底
+- **Border** (#E2E8F0): 分割线、边框
+- **Text** (#0F172A): 正文
+- **Muted** (#64748B): 副标题、标签
+- **Success** (#059669): 保存/格式化成功
+- **Error** (#DC2626): 未保存、JSON 无效
+- **Code Bg** (#1E293B) / **Code Fg** (#CBD5E1): JSON 编辑器
 
 ## Typography
 
-- **Headline Font**: Segoe UI
-- **Body Font**: Segoe UI
-- **Mono Font**: Consolas
-
-- **Display**: unused. No marketing hero.
-- **Headline**: Segoe UI 11px/400. Window title is system "MQTT 发送工具".
-- **Subhead**: unused. Sections use 9–10px labels, not titles.
-- **Body Large**: unused.
-- **Body**: Segoe UI 9px/400, 1.3 line height. Labels, buttons, checkboxes.
-- **Body Small**: Segoe UI 8px/400. Optional helper; prefer none.
-- **Caption**: Segoe UI 8px/400. Log timestamps if added later.
-- **Overline**: unused.
-- **Code**: Consolas 10px/400, 1.4 line height. Payload Text only.
+- **UI**: Segoe UI 10px（标签、按钮、列表）
+- **UI Sm**: Segoe UI 9px（辅助说明）
+- **Section**: Segoe UI 11px bold（区块标题）
+- **Hero**: Segoe UI 20px bold（主窗标题）
+- **Mono**: Cascadia Mono / Consolas 11px（JSON、日志）
+- **Icons**: Segoe MDL2 Assets（`_icon_font` / `IC` 常量）
 
 ## Spacing
 
 - **Base unit:** 8px
-- **Scale:** 4, 8, 12, 16, 24, 32
-- **Component padding:** root Frame `padding=10`; row gaps `pady=(8, 0)`; label-to-field `padx=(8, 4)`
-- **Section spacing:** 8px between stacked rows; payload expands; log height 8 lines
-- **Window:** default `920x760`, minsize `760x580`
+- **Root padding:** 20px horizontal, 18px vertical
+- **Sidebar width:** 328px（`C["sidebar_w"]`）
+- **Card padding:** 14–16px
+- **Section head:** 12px bottom gap + 1px divider
 
-## Border Radius
+## Window
 
-Tk/ttk native. Do not draw custom CSS radii.
-
-- **None:** 0px — window chrome
-- **Small:** system ttk — buttons, combobox
-- **Medium:** unused custom
-- **Large:** unused
-- **XL:** unused
-- **Full:** unused (no pills)
-
-## Elevation
-
-Flat ttk. No custom shadows.
-
-- **Subtle:** grouping by 8px vertical gap, not cards
-- **Medium:** native Entry/Text sunken border only
-- **Large:** unused
-- **Overlay:** system `messagebox` / `simpledialog` only
-- **Focus Ring**: native ttk focus; do not paint extra rings
+| 窗口 | 默认几何 | 最小 | 初始化 |
+|------|----------|------|--------|
+| 主窗 | 1100×920（fallback） | 900×680 | `_fit_initial_window` 按内容 + 屏幕居中 |
+| 模版管理 | 980×720 | 760×560 | 相对主窗居中，左侧列表区可滚动 |
+| 运行日志 | 860×560 | 640×400 | 固定 |
 
 ## Components
 
-### Buttons
-**Primary (Filled)** — Send：`ttk.Button` 右对齐，文案「发送」；发送中 `state=DISABLED`，完成后恢复
-**Secondary** — 模版「保存 / 另存为 / 重命名 / 删除」：同一行、左起、间距 4px
-**Ghost** — 历史「删」：`width=3`，贴在 Combobox 右侧
-**Destructive** — 删除模版走 `askyesno`，按钮本身仍是 Secondary，不单独红底
-- **Sizes**: 跟随 ttk；删钮固定宽 3 字符
-- **Disabled**: Send 发送期间禁用
+### Header（主窗 / 弹窗）
 
-### Cards
-**Default** — 无卡片。整窗一个 `ttk.Frame`
-**Elevated** — unused
+- 高度 56–92px；深色底 + 底部 accent 线 2–3px
+- 左侧：28–46px 圆角徽章 + 标题 + 副标题
+- 独立子窗：右侧「收回主界面」outline 按钮
 
-### Inputs
-**Text Input** — Host/Port/User：`ttk.Combobox`；Password：`ttk.Entry(show="*")`；Topic：`ttk.Combobox` 可编辑
-- **Label**: 左置 Segoe UI，与控件同一行
-- **Helper text**: 无；错误进底部日志
-**Payload** — `tk.Text` `wrap=NONE`，Consolas 10，垂直滚动条，`undo=True`
-**Log** — `tk.Text` height=8，`wrap=WORD`，`state=DISABLED`，仅 `_append_log` 写入
+### Cards（`_card`）
 
-### Chips
-**Filter Chip** — unused
-**Status Chip** — unused；状态只写日志文案
+- 1px 边框 shell + 白底 inner；`accent=True` 时左边 3px 蓝色强调
+- 用于连接、模版、payload、日志区
 
-### Lists
-**Default List Item** — Combobox 下拉历史，最多 50；右键「删除此项 / 清空历史」
+### Buttons（`_flat_btn`）
+
+- **primary**: 蓝底白字（发送、应用、保存）
+- **secondary**: 浅底描边
+- **outline**: 白底蓝字
+- **ghost**: 无底色（删除、撤销）
+- 支持 `icon=` Segoe MDL2 前缀
+
+### Sidebar（主窗）
+
+- 连接卡片 + 模版卡片，整栏 `_scrollable_frame` 可纵向滚
+- 模版行：Combobox +「应用到当前窗口」+ 新增 / 管理
+
+### Payload Tabs
+
+- Tab 栏：激活态白底蓝字；✎ 重命名、× 关闭；`+` 新建；拖拽分离
+- 每 Tab：`tk.Text` 无 wrap + 双滚动条；下方 JSON 状态 pill
+- 450ms debounce 自动格式化
+
+### Template Manager（Toplevel）
+
+| 区域 | 规格 |
+|------|------|
+| 左栏 | 宽 280px；搜索框；Listbox + 滚动条；模版计数；新建/窗口保存/应用/重命名/删除 |
+| 右栏 JSON | 深色 code 编辑器；双滚动；`Ctrl+A/C/V/X/Z/Y` + 右键菜单 |
+| 保存行 | 「保存右侧编辑」「放弃未保存」+ 状态文案 |
+| 操作记录 | Listbox height=4；「回撤选中记录」；双击记录可回撤 |
+| 行为 | 粘贴后立即 JSON indent=2；切换模版才弹未保存；两 Listbox 均 `exportselection=False` |
+
+### Log
+
+- 主窗内嵌 height=6，`wrap=WORD`，纵向滚动条
+- 搜索 +「放大查看」打开 `LogViewerDialog`
 
 ### Checkboxes
-`ttk.Checkbutton`：显示密码；发送前自动 muid + sign（默认开）；触发时间取当前（默认开）；模版 sn 跟随主题（默认开）。与按钮同一 `act` 行，间距 12px。
 
-### Radio Buttons
-unused
-
-### Tooltips
-unused；错误用 `messagebox.showerror`
-
-### Window
-title `MQTT 发送工具`；几何 `920x760`；minsize `760x580`
+- 自动 muid + sign；触发时间取当前；sn 跟随主题（默认开）
+- 密码「显示」Checkbutton
 
 ## Do's and Don'ts
 
-- **Do** keep connection fields on one row so operators can tab Host → Port → User → Password.
-- **Do** use Consolas 10 for payload; JSON is the product.
-- **Do** disable Send while the background publish thread runs.
-- **Do** put failures in the log with `发送失败:` prefix; keep the form filled.
-- **Do** mask password by default; 「显示」 is opt-in.
-- **Don't** wrap the window in a dark dashboard or web-like card grid.
-- **Don't** use MarketNest terracotta, rounded-full CTAs, or drop shadows.
-- **Don't** put password into history dropdowns or screenshots in docs.
-- **Don't** add a second window for templates; CRUD stays on the template row.
-- **Don't** shrink payload to a single-line Entry; it must remain the expanding editor.
+- **Do** 主窗/模版弹窗启动后 `after_idle` 适配尺寸，小屏靠滚动条暴露更多内容
+- **Do** JSON 区用等宽字体；粘贴进模版编辑器后自动格式化
+- **Do** 模版管理保存只读右侧 editor 内容，勿与「从当前窗口保存」混淆
+- **Do** 操作记录回撤前 `askyesno` 确认
+- **Don't** 在 `tk.Frame(..., pady=(0,n))` 写 tuple — 用 `pack(pady=...)`
+- **Don't** 多个 Listbox 共用默认 `exportselection=True`
+- **Don't** 点击 JSON 编辑器时把左侧模版失选当作切换模版
+- **Don't** 提交 broker 口令或写进 `history.json`

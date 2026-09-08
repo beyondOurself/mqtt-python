@@ -1,8 +1,8 @@
 # -*- coding: UTF-8 -*-
-import json,uuid
+import hashlib
+import json
 import time
-import  hashlib,requests
-import paho.mqtt.client as mqtt
+import uuid
 def md5sign(value):
     timestamp = str(int((time.time()) * 1000-1000*60*4))
     wd = hashlib.md5()
@@ -17,6 +17,7 @@ def md5sign(value):
 def on_connect(self,client, userdata, flags, rc):
     print("Connected with result code: " + str(rc))
 if __name__ == '__main__':
+    import paho.mqtt.client as mqtt
     #登录上传信息
     # data={"name":"chargingLogin","muid":"0220e2b513e2-2d8f-4d0e-a591-bbba0afead53","sn":"CD0CCS04CF6BSP98","data":{"deviceUid":"02160030","pileType":1,"manufacturer":"test12","ratedPower":7000,"gunCount":2,"billingRuleId":1,"billingRuleVersion":"0","operatorCode":"0","password":"000000","devSoftVersion":"DC_2.0.1","devVersion":"PWD_OO_2020","protocolVersion":"2.0","extend":{}},"version":"v2.0.0_1","timestamp":""}
     #上传设备告警

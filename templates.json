@@ -1,0 +1,114 @@
+{
+  "timing (DJ0GLJ04E8A9DETA)": {
+    "data": {
+      "time": "2025-01-22 14:37:18",
+      "status": 0
+    },
+    "muid": "892154e3c425-97b6-4ce5-b0e2-c81c69b8b3bc",
+    "name": "timing",
+    "sn": "DJ0GLJ04E8A9DETA",
+    "timestamp": "1737517038540",
+    "version": "v2.1.1_1"
+  },
+  "heartBeat": {
+    "muid": "",
+    "name": "heartBeat",
+    "sn": "MJ0FRY04FEF4H8MP",
+    "timestamp": "",
+    "version": "v2.1.1_1"
+  },
+  "timing (MJ0FRY04FEF4H8MP)": {
+    "data": {
+      "time": "2026-03-26 11:09:28",
+      "status": 0
+    },
+    "muid": "",
+    "name": "timing",
+    "sn": "MJ0FRY04FEF4H8MP",
+    "timestamp": "",
+    "version": "v2.1.1_1"
+  },
+  "channelPersonAlert": {
+    "data": {
+      "ownerType": 3,
+      "sendCenterStatus": 0,
+      "triggerInduction": "2026-08-27 09:21:00",
+      "snapUrl": "https://bsgoalsmartcloud.oss-cn-shenzhen.aliyuncs.com/AccessControl/1744353215604.jpg,https://bsgoalsmartcloud.oss-cn-shenzhen.aliyuncs.com/AccessControl/TD0TD204EB6QXKGV/2025-04-11/11000_20250411135944_rgb.jpg",
+      "eventType": 1,
+      "ownerId": 10077,
+      "triggerWarning": "2026-08-27 09:21:00",
+      "recordId": "",
+      "ownerName": "77",
+      "runUserNumber": 3,
+      "temperature": "36.5",
+      "keyType": 1,
+      "userNumber": 1
+    },
+    "muid": "",
+    "name": "channelPersonAlert",
+    "sn": "TD0TD204FC3T9751",
+    "timestamp": "",
+    "version": "v2.0.0"
+  },
+  "banner": {
+    "name": "banner",
+    "muid": "0220e2b513e2-2d8f-4d0e-a591-bbba0afead50",
+    "sn": "MJ0FRY04E318Z276",
+    "data": {
+      "bannerId": 259,
+      "type": 2,
+      "url": "https://bsgoalsmartcloud.oss-cn-shenzhen.aliyuncs.com/AccessControl/20241205/20241205133348_ex1y.MP4",
+      "serialNumber": 2
+    },
+    "operator": "13068732224",
+    "version": "v2.0.0_1",
+    "timestamp": ""
+  },
+  "delBanner": {
+    "name": "delBanner",
+    "muid": "",
+    "sn": "MJ0FRY04E318Z276",
+    "data": {
+      "bannerId": 258
+    },
+    "operator": "13068732224",
+    "version": "v2.0.0_1",
+    "timestamp": "1673234090000"
+  },
+  "111": {
+    "data": {
+      "ownerType": 3,
+      "sendCenterStatus": 0,
+      "triggerInduction": "2026-08-27 09:21:00",
+      "snapUrl": "https://bsgoalsmartcloud.oss-cn-shenzhen.aliyuncs.com/AccessControl/1744353215604.jpg,https://bsgoalsmartcloud.oss-cn-shenzhen.aliyuncs.com/AccessControl/TD0TD204EB6QXKGV/2025-04-11/11000_20250411135944_rgb.jpg",
+      "eventType": 1,
+      "ownerId": 10077,
+      "triggerWarning": "2026-08-27 09:21:00",
+      "recordId": "",
+      "ownerName": "77",
+      "runUserNumber": 3,
+      "temperature": "36.5",
+      "keyType": 1,
+      "userNumber": 1
+    },
+    "muid": "",
+    "name": "channelPersonAlert",
+    "sn": "TD0TD204FC3T9751",
+    "timestamp": "",
+    "version": "v2.0.0"
+  },
+  "releaseAlarm-取消告警": {
+    "data": {
+      "eventType": "3",
+      "doorPoint": 0,
+      "recordId": "",
+      "handleStatus": 1
+    },
+    "muid": "7e154c94-aa54-11f1-98bd-94c691b7e2e4",
+    "name": "releaseAlarm",
+    "sn": "TD0TD204FC3T9751",
+    "timestamp": "1788741289449",
+    "version": "v2.0.0_0",
+    "sign": "5fcec35db761302336df2f1f2f6443e0"
+  }
+}

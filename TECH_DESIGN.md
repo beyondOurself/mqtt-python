@@ -26,9 +26,17 @@
 
 ```
 mqtt-python/
-  mqtt_gui.py          # GUI 入口
+  mqtt_gui.py          # GUI 入口（主窗 + 模版管理弹窗 + 日志查看）
   mqtt_publish.py      # Mqttpub 短连接发布
   md5tool.py           # md5sign
+  setup_env.py         # 虚拟环境检测 / 依赖安装 / 校验
+  setup.bat            # 一键初始化（含 winget 装 Python）
+  run.bat              # 无 .venv 时先 setup，再启动 GUI
+  dev.bat              # 开发热重载（dev_reload.py）
+  dev_reload.py        # 监听 *.py 变更并重启窗口
+  build.bat            # 安装 dev 依赖 + PyInstaller
+  requirements.txt     # 运行时依赖（paho-mqtt）
+  requirements-dev.txt # 打包依赖（pyinstaller）
   mqtt_tool_v5.spec    # 当前打包
   templates.json       # 运行时模版（exe 旁或源码旁）
   history.json         # 连接历史
@@ -74,7 +82,51 @@ JSON 对象，常见字段：`name`、`sn`、`muid`、`timestamp`、`version`、
 
 ## 路由与页面结构
 
-单窗体 `MqttToolApp`，无多页。分区：连接行 → 主题 → 模版行 → payload → 选项+发送 → 日志。
+- **主窗体** `MqttToolApp`：顶栏品牌区 + 左侧连接/模版侧栏（可滚动）+ 右侧多 Tab payload / 发送选项 / 日志
+- **模版管理** `TemplateManagerDialog`（Toplevel）：左列表 + 右 JSON 编辑 + 操作记录；`grab_set` 模态
+- **运行日志** `LogViewerDialog`（Toplevel）：全文搜索与放大查看
+- **独立窗口**：Tab 拖拽分离为子 `MqttToolApp(parent_app=...)`，标题栏「收回主界面」合并 Tab 回父窗
+
+## 模版管理弹窗（TemplateManagerDialog）
+
+| 区域 | 行为 |
+|------|------|
+| 模版列表 | 搜索过滤；双击应用；`exportselection=False` 避免与操作记录列表抢选中 |
+| JSON 编辑 | 可编辑；`Ctrl+A/C/V/X/Z/Y` + 右键菜单；粘贴后 `_format_preview_json` 立即 indent=2 |
+| 保存 | 「保存右侧编辑」读 `preview.get("1.0","end-1c")` 写回 `templates.json` |
+| 操作记录 | 内存栈最多 50 条（新建/保存/窗口保存/重命名/删除）；选中后「回撤选中记录」恢复 `before` 快照 |
+| 未保存提示 | 仅**切换到其他模版**时弹窗；点右侧编辑器不失选左侧项（`_restore_list_selection`） |
+| 初始化尺寸 | `after_idle(_fit_initial_window)` 按 `winfo_reqwidth/height` 适配并相对主窗居中 |
+
+## 多 Tab 与窗口分离
+
+- `PayloadTab`：每 Tab 独立 JSON 编辑器，450ms debounce 自动格式化
+- Tab 栏：重命名（✎）、关闭（×）、右键菜单、拖拽分离
+- `_detach_tab`：新建 Toplevel + 子 `MqttToolApp`，继承连接参数
+- `_dock_to_parent`：子窗 Tab 合并回父窗；`_close_child_app` 关闭前可选收回
+
+## 滚动与窗口适配
+
+- `_scrollable_frame(parent, width)`：Canvas + 内层 Frame + 纵向滚动条；鼠标进入绑定 `<MouseWheel>`
+- 主窗侧栏、模版管理左侧列表区使用可滚动容器
+- 主窗 / 模版弹窗均在 UI 构建完成后 `after_idle` 调用 `_fit_initial_window`
+
+## 环境初始化
+
+| 脚本 | 作用 |
+|------|------|
+| `setup.bat` | `chcp 65001`；检测 `py`/`python`；无则 winget 装 Python 3.12；调用 `setup_env.py --install` |
+| `setup_env.py` | 创建 `.venv`；`pip install -r requirements.txt`；校验 tkinter / paho-mqtt / `md5tool` / `mqtt_publish` |
+| `run.bat` | 无 `.venv` 则 `setup.bat nopause`，再 `.venv\Scripts\python mqtt_gui.py` |
+| `dev.bat` | 同上，运行 `dev_reload.py` 热重载 |
+| `build.bat` | 同上，装 `requirements-dev.txt` 后 PyInstaller |
+
+**模块导入约束**：`md5tool.py` 顶层禁止 import `requests` / `paho`（仅 `__main__` 块可用），否则 `setup_env.py` 校验失败。
+
+## Tkinter 布局注意
+
+- `tk.Frame` 的 `padx`/`pady` **不支持** tuple（如 `pady=(0,16)`），须写在 `frame.pack(pady=(0,16))` 上；否则 TclError 导致弹窗初始化中断、列表未加载
+- 多个 `Listbox` 并存时设 `exportselection=False`，避免 Windows 下选中态互抢
 
 ## 关键技术方案
 
@@ -96,3 +148,6 @@ JSON 对象，常见字段：`name`、`sn`、`muid`、`timestamp`、`version`、
 - 设备不认：签名未勾选、JSON 手改后 key 顺序、timestamp 偏移被改
 - exe 丢模版：`templates.json` 不在 exe 同目录
 - 主题错设备：未开「模版 sn 跟随主题」，或 payload.sn 与主题末段不一致
+- 模版管理列表空白：检查弹窗是否 TclError（Frame 非法 pady）；或 `_reload_list` 是否在 UI 建完前被中断
+- 操作记录点不中：确认 `op_list` 与模版 `listbox` 均已 `exportselection=False`
+- 环境 setup 报 `No module named requests`：检查 `md5tool.py` 是否有多余顶层 import

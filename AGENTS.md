@@ -17,6 +17,9 @@
 - Windows：Shell 用 PowerShell；路径用完整 Windows 路径或仓库相对路径。
 - 禁止提交 broker 口令、证书、`.env`。Password 不得写入 `history.json`，不得写进文档示例。
 - `md5sign` 的 timestamp 偏移（−4 分钟）与排序+紧凑 JSON 规则禁止无需求改动。
+- **环境**：优先 `run.bat` / `dev.bat`；改依赖同步 `requirements.txt` 与 `setup_env.py` 校验项。
+- **Tkinter**：`Frame` 勿用 tuple 作 `padx`/`pady` 构造参数；多 `Listbox` 设 `exportselection=False`。
+- **模版弹窗**：保存右侧 JSON 与「从当前窗口保存」语义分离；切换模版才提示未保存。
 
 ## UI 与 DESIGN.md（强制）
 
@@ -52,9 +55,10 @@
 ## 测试与发布
 
 - 改发送/签名后：用测试 broker 发一条 `heartBeat` 或 `channelPersonAlert`，日志出现「发送成功」
-- 改 UI 后对照 `DESIGN.md` 看默认窗体能否完整显示连接行与发送按钮
+- 改 UI 后对照 `DESIGN.md`；主窗与模版管理弹窗启动应显示完整或可见滚动条
+- 改模版管理后：列表有数据、粘贴 JSON 自动格式化、操作记录可选中回撤
 - 密钥与口令不可提交
-- 打包：`pyinstaller mqtt_tool_v5.spec`，将 `templates.json` 放 exe 同目录
+- 打包：双击或执行 `build.bat`（内部调用 `pyinstaller mqtt_tool_v5.spec`），将 `templates.json` 放 exe 同目录
 
 ## 注意事项
 
