@@ -4,18 +4,26 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-TARGET = ROOT / "mqtt_gui.py"
-SKIP = {"dev_reload.py"}
+ROOT = Path(__file__).resolve().parent.parent
+WATCH_ROOT = ROOT / "mqtt_tool"
+SKIP_NAMES = {"_migrate_layout.py"}
 
 
 def watched_mtimes():
     out = {}
-    for p in ROOT.glob("*.py"):
-        if p.name in SKIP:
+    for p in WATCH_ROOT.rglob("*.py"):
+        if "__pycache__" in p.parts:
+            continue
+        if p.name in SKIP_NAMES:
             continue
         try:
             out[str(p)] = p.stat().st_mtime
+        except OSError:
+            pass
+    launch = ROOT / "launch.py"
+    if launch.is_file():
+        try:
+            out[str(launch)] = launch.stat().st_mtime
         except OSError:
             pass
     return out
@@ -37,20 +45,18 @@ def wait_stable_mtimes(timeout=4.0):
 
 
 def clear_pyc():
-    cache = ROOT / "__pycache__"
-    if not cache.is_dir():
-        return
-    for p in cache.glob("mqtt_gui*.pyc"):
-        try:
-            p.unlink()
-        except OSError:
-            pass
+    for cache in WATCH_ROOT.rglob("__pycache__"):
+        for p in cache.glob("*.pyc"):
+            try:
+                p.unlink()
+            except OSError:
+                pass
 
 
 def start_app():
     clear_pyc()
     return subprocess.Popen(
-        [sys.executable, "-B", str(TARGET)],
+        [sys.executable, "-B", "-m", "mqtt_tool"],
         cwd=str(ROOT),
     )
 
@@ -67,10 +73,7 @@ def stop_app(proc):
 
 
 def main():
-    if not TARGET.is_file():
-        print("缺少 mqtt_gui.py")
-        sys.exit(1)
-    print("开发模式：改 *.py 自动重启窗口（Ctrl+C 退出）")
+    print("开发模式：改 mqtt_tool/**/*.py 自动重启窗口（Ctrl+C 退出）")
     last = wait_stable_mtimes()
     proc = start_app()
     try:

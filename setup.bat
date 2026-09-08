@@ -52,7 +52,7 @@ echo [1/2] 使用解释器: !LAUNCHER!
 echo [2/2] 创建虚拟环境并安装依赖 …
 echo.
 
-!LAUNCHER! setup_env.py --install
+!LAUNCHER! scripts\setup_env.py --install
 if !errorlevel! neq 0 (
   echo.
   echo 初始化失败，请检查上方错误信息。

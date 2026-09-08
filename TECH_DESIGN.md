@@ -17,7 +17,7 @@
 | UI | Tkinter + ttk |
 | MQTT | paho-mqtt（`paho.mqtt.client`） |
 | 签名 | 标准库 `hashlib.md5` |
-| 打包 | PyInstaller 单文件，`build_release.py` 驱动；产物 `MQTT发送工具_{major}.{minor}.{patch}.{build}.exe` |
+| 打包 | PyInstaller 单文件，`scripts/build_release.py` 驱动；入口 `launch.py`；产物 `MQTT发送工具_{major}.{minor}.{patch}.{build}.exe` |
 | 运行环境 | Windows 10+ |
 
 不引入 Web 框架、不引入 Qt。
@@ -26,29 +26,37 @@
 
 ```
 mqtt-python/
-  mqtt_gui.py          # GUI 入口（主窗 + 模版管理弹窗 + 日志查看）
-  mqtt_publish.py      # Mqttpub 短连接发布
-  md5tool.py           # md5sign
-  setup_env.py         # 虚拟环境检测 / 依赖安装 / 校验
-  setup.bat            # 一键初始化（含 winget 装 Python）
-  run.bat              # 无 .venv 时先 setup，再启动 GUI
-  dev.bat              # 开发热重载（dev_reload.py）
-  dev_reload.py        # 监听 *.py 变更并重启窗口
-  build.bat            # 安装 dev 依赖 + 调用 build_release.py
-  build_release.py     # bump build、生成 version_info、PyInstaller、拷 dist 资源
-  app_version.py       # 版本读写与格式化（GUI 标题 / exe 基名）
-  version.json         # 软件版本源（build 每次打包 +1）
-  requirements.txt     # 运行时依赖（paho-mqtt）
-  requirements-dev.txt # 打包依赖（pyinstaller）
-  templates.json       # 运行时模版（exe 旁或源码旁）
-  history.json         # 连接历史
-  session.json         # 会话状态（含密码，勿提交 git）
-  version_info.txt     # 构建时生成（gitignore）
-  .build_out.txt       # 构建产物路径（gitignore）
-  build/ dist/         # 打包产物
+  launch.py                 # PyInstaller / 兼容入口
+  run.bat / setup.bat / dev.bat / build.bat
+  version.json              # 软件版本源
+  templates.json            # 运行时模版（可写，exe 旁或源码旁）
+  history.json / session.json
+  requirements.txt
+  requirements-dev.txt
+  scripts/
+    setup_env.py
+    build_release.py
+    dev_reload.py
+  mqtt_tool/
+    __main__.py             # python -m mqtt_tool
+    version.py
+    protocol/sign.py        # md5sign
+    mqtt/publisher.py       # Mqttpub
+    storage/paths.py        # app_dir / package_data_dir
+    storage/templates.py
+    data/templates.default.json
+    ui/
+      theme.py
+      widgets.py
+      payload_tab.py
+      log_viewer.py
+      template_dialog.py
+      main_window.py
+  tests/test_sign.py
+  build/ dist/
 ```
 
-主路径只改：`mqtt_gui.py`、`mqtt_publish.py`、`md5tool.py`。
+主路径只改：`mqtt_tool/` 下对应模块。
 
 ## 数据与接口约定
 

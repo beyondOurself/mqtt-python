@@ -16,7 +16,7 @@ if not exist "%PY%" (
 )
 
 "%PY%" -m pip install -q -r requirements-dev.txt
-"%PY%" build_release.py
+"%PY%" scripts\build_release.py
 if errorlevel 1 (
   echo 打包失败
   pause

@@ -15,5 +15,5 @@ if not exist "%PY%" (
   exit /b 1
 )
 
-"%PY%" dev_reload.py
+"%PY%" scripts\dev_reload.py
 pause

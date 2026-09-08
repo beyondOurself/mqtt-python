@@ -19,7 +19,7 @@ build.bat    # 打包 exe
 
 1. 安装 Python 3（带 Tcl/Tk）
 2. `pip install -r requirements.txt`
-3. `python mqtt_gui.py`
+3. `python -m mqtt_tool`
 
 ## 主要功能
 
@@ -43,7 +43,7 @@ build.bat    # 打包 exe
 build.bat
 ```
 
-流程：`build.bat` → `build_release.py` → 自动 `build` +1 → PyInstaller 单文件 exe。
+流程：`build.bat` → `scripts/build_release.py` → 自动 `build` +1 → PyInstaller 单文件 exe（入口 `launch.py`）。
 
 **版本号**（`version.json`，单一事实源）：
 
@@ -60,18 +60,12 @@ build.bat
 
 | 路径 | 作用 |
 |------|------|
-| `mqtt_gui.py` | GUI 入口 |
-| `mqtt_publish.py` | 短连接 publish |
-| `md5tool.py` | `md5sign` |
-| `setup_env.py` / `setup.bat` | 虚拟环境与依赖 |
+| `mqtt_tool/` | 主包：`protocol` / `mqtt` / `storage` / `ui` |
+| `launch.py` | 打包与兼容入口 |
+| `scripts/` | setup / 热重载 / 打包 |
 | `run.bat` / `dev.bat` / `build.bat` | 运行 / 热重载 / 打包 |
-| `build_release.py` | bump 版本 + PyInstaller + 拷 dist 资源 |
-| `app_version.py` | 读/写 `version.json`；标题与 exe 命名 |
-| `version.json` | 软件版本（major/minor/patch + 自增 build） |
-| `dev_reload.py` | 文件监听重启 |
-| `requirements.txt` | 运行时依赖 |
-| `templates.json` | 报文模版 |
-| `history.json` | 连接历史 |
+| `version.json` | 软件版本 |
+| `templates.json` | 运行时模版 |
 | `DESIGN.md` | UI 规范 |
 | `TODO.md` | 任务进度 |
 

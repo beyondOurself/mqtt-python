@@ -11,7 +11,9 @@ def _roots():
     roots = []
     if getattr(sys, "frozen", False):
         roots.append(os.path.dirname(sys.executable))
-    roots.append(os.path.dirname(os.path.abspath(__file__)))
+    here = os.path.dirname(os.path.abspath(__file__))
+    roots.append(here)
+    roots.append(os.path.dirname(here))
     return roots
 
 

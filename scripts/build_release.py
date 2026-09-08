@@ -3,11 +3,14 @@ import os
 import subprocess
 import sys
 
-from app_version import APP_NAME, bump_build, exe_basename, format_full, save_version_data
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+from mqtt_tool.version import APP_NAME, bump_build, exe_basename, format_full, save_version_data
+
 BUILD_OUT = os.path.join(ROOT, ".build_out.txt")
 VERSION_INFO = os.path.join(ROOT, "version_info.txt")
+DATA_SEP = ";" if os.name == "nt" else ":"
 
 
 def _write_version_info(data, exe_name):
@@ -79,6 +82,7 @@ def main():
     exe_name = exe_basename(data)
     _write_version_info(data, exe_name)
 
+    data_src = os.path.join("mqtt_tool", "data", "templates.default.json")
     cmd = [
         sys.executable,
         "-m",
@@ -91,7 +95,11 @@ def main():
         exe_name,
         "--version-file",
         VERSION_INFO,
-        "mqtt_gui.py",
+        "--paths",
+        ROOT,
+        "--add-data",
+        "%s%s%s" % (data_src, DATA_SEP, os.path.join("mqtt_tool", "data")),
+        "launch.py",
     ]
     subprocess.run(cmd, check=True)
 

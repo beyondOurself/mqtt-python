@@ -15,5 +15,5 @@ if not exist "%PY%" (
   exit /b 1
 )
 
-"%PY%" mqtt_gui.py
+"%PY%" -m mqtt_tool
 if errorlevel 1 pause

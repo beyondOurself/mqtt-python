@@ -13,8 +13,8 @@
 ## 二、市场现状分析
 
 - MQTTX、MQTT Explorer 适合通用订阅/发布，不内置博享家 `md5sign`（key 排序 + timestamp 偏移 + UTF-8 MD5）。
-- 纯脚本（`mqtt_publish.py`）能发，但切设备 SN、改 payload、留历史成本高。
-- 内部已有 Tkinter GUI（`mqtt_gui.py`）+ PyInstaller 单文件 exe（`MQTT发送工具_{版本号}.exe`，build 每次打包自增），日常在用。
+- 纯脚本能发，但切设备 SN、改 payload、留历史成本高。
+- 内部已有 Tkinter GUI（`mqtt_tool` 包）+ PyInstaller 单文件 exe（`MQTT发送工具_{版本号}.exe`，build 每次打包自增），日常在用。
 
 ## 三、竞品对比
 

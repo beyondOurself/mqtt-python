@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 VENV_DIR = ROOT / ".venv"
 REQ_FILE = ROOT / "requirements.txt"
 MIN_VERSION = (3, 8)
@@ -71,8 +71,9 @@ def _verify(python):
         "assert sys.version_info[:2]>=%r\n"
         "import tkinter; tkinter.Tk().destroy()\n"
         "from paho.mqtt import client as mqtt_client\n"
-        "from md5tool import md5sign\n"
-        "from mqtt_publish import Mqttpub\n"
+        "from mqtt_tool.protocol.sign import md5sign\n"
+        "from mqtt_tool.mqtt.publisher import Mqttpub\n"
+        "from mqtt_tool.ui.main_window import MqttToolApp\n"
     ) % (MIN_VERSION,)
     r = _run([python, "-c", code], capture_output=True, text=True)
     if r.returncode != 0:
