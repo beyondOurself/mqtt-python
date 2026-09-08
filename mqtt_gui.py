@@ -671,7 +671,7 @@ class LogViewerDialog(tk.Toplevel):
         self.text.insert("1.0", content)
         self.text.configure(state=tk.DISABLED)
         self._clear_hits()
-        self.status.configure(text="共 %d 行" % max(content.count("\n"), 0))
+        self.status.configure(text="共 %d 条" % content.count("─" * 58))
 
     def _clear_hits(self):
         self.text.tag_remove("hit", "1.0", tk.END)
@@ -1247,14 +1247,20 @@ class MqttToolApp:
         self._active_tab_idx = 0
         self._child_apps = []
         self._history_widgets = {}
+        self._log_viewer = None
+        self._toast_win = None
+        self._toast_job = None
         self.templates_path = os.path.join(_app_dir(), "templates.json")
         self.history_path = os.path.join(_app_dir(), "history.json")
+        self.session_path = os.path.join(_app_dir(), "session.json")
         self.templates = self._load_templates()
         self.history = self._load_history()
 
         self._setup_styles()
         self._build_ui()
 
+        session_applied = False
+        session = None
         if initial_connection:
             self._apply_initial_connection(initial_connection)
 
@@ -1266,13 +1272,22 @@ class MqttToolApp:
                     self._tab_counter = max(self._tab_counter, 1)
             self.add_payload_tab(initial_tab_title or "窗口 1")
             self.active_tab().fill_raw(initial_tab_raw)
-        else:
+        elif self.parent_app is None:
+            session = self._load_session()
+            if session and session.get("tabs"):
+                self._apply_session(session)
+                session_applied = True
+        if not session_applied and initial_tab_raw is None:
             start = DEFAULT_TEMPLATE if DEFAULT_TEMPLATE in self.templates else next(iter(self.templates))
             self.template_combo.set(start)
             self.add_payload_tab("窗口 1")
             self.apply_template(start)
 
-        self.root.after_idle(self._fit_initial_window)
+        if self.parent_app is None:
+            self.root.protocol("WM_DELETE_WINDOW", self._on_main_close)
+
+        if not (session_applied and session and session.get("geometry")):
+            self.root.after_idle(self._fit_initial_window)
 
     def _fit_initial_window(self):
         self.root.update_idletasks()
@@ -1290,9 +1305,98 @@ class MqttToolApp:
         if getattr(self, "_sidebar_canvas", None):
             self._sidebar_canvas.configure(scrollregion=self._sidebar_canvas.bbox("all"))
 
+    def _load_session(self):
+        if not os.path.isfile(self.session_path):
+            return None
+        try:
+            with open(self.session_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict) and isinstance(data.get("tabs"), list) and data["tabs"]:
+                return data
+        except Exception:
+            pass
+        return None
+
+    def _collect_session_state(self):
+        return {
+            "version": 1,
+            "geometry": self.root.geometry(),
+            "connection": {
+                "host": self._resolve_host(self.host.get()),
+                "port": self.port.get().strip(),
+                "user": self.user.get().strip(),
+                "topic": self.topic.get().strip(),
+                "pwd": self.pwd.get(),
+            },
+            "options": {
+                "auto_sign": bool(self.auto_sign.get()),
+                "auto_trigger_time": bool(self.auto_trigger_time.get()),
+                "sync_sn": bool(self.sync_sn.get()),
+                "pwd_show": bool(self.pwd_show.get()),
+            },
+            "template": self.template_combo.get().strip(),
+            "tab_counter": self._tab_counter,
+            "active_tab": self._active_tab_idx,
+            "tabs": [{"title": t.title, "raw": t.get_raw_text()} for t in self._tabs],
+        }
+
+    def _save_session(self):
+        if self.parent_app is not None:
+            return
+        with open(self.session_path, "w", encoding="utf-8") as f:
+            json.dump(self._collect_session_state(), f, ensure_ascii=False, indent=2)
+
+    def _apply_session(self, session):
+        conn = session.get("connection") or {}
+        self._apply_initial_connection(conn)
+        opts = session.get("options") or {}
+        self.auto_sign.set(opts.get("auto_sign", True))
+        self.auto_trigger_time.set(opts.get("auto_trigger_time", True))
+        self.sync_sn.set(opts.get("sync_sn", True))
+        self.pwd_show.set(opts.get("pwd_show", False))
+        self._toggle_pwd()
+        tpl = (session.get("template") or "").strip()
+        if tpl and tpl in self.templates:
+            self.template_combo.set(tpl)
+        try:
+            self._tab_counter = int(session.get("tab_counter") or 0)
+        except (TypeError, ValueError):
+            self._tab_counter = len(session.get("tabs") or [])
+        while self._tabs:
+            tab = self._tabs.pop()
+            tab.frame.destroy()
+        self._active_tab_idx = 0
+        for item in session.get("tabs") or []:
+            title = (item.get("title") or "").strip() or None
+            tab = self.add_payload_tab(title)
+            raw = item.get("raw") or ""
+            if str(raw).strip():
+                tab.fill_raw(str(raw))
+        if not self._tabs:
+            self.add_payload_tab("窗口 1")
+        active = session.get("active_tab", 0)
+        try:
+            active = int(active)
+        except (TypeError, ValueError):
+            active = 0
+        if active < 0 or active >= len(self._tabs):
+            active = max(0, len(self._tabs) - 1)
+        self._select_tab(active)
+        geo = session.get("geometry")
+        if geo:
+            self.root.after_idle(lambda g=geo: self.root.geometry(g))
+
+    def _on_main_close(self):
+        try:
+            self._save_session()
+        except Exception:
+            pass
+        self.root.destroy()
+
     def _apply_initial_connection(self, conn):
         if conn.get("host"):
-            self.host.set(conn["host"])
+            host = conn["host"].strip()
+            self.host.set(self._host_label(host))
         if conn.get("port"):
             self.port.set(conn["port"])
         if conn.get("user"):
@@ -1419,7 +1523,7 @@ class MqttToolApp:
         conn_wrap.pack(fill=tk.X, pady=(0, 12))
         _section_head(conn, "连接", "Broker 与主题", icon=IC["connection"])
 
-        self.host = self._add_history_field(conn, "host", "Host", "192.168.110.19")
+        self.host = self._add_host_field(conn, "192.168.110.19")
         self.port = self._add_history_field(conn, "port", "Port", "1883")
         self.user = self._add_history_field(conn, "user", "User", "test")
 
@@ -1558,6 +1662,11 @@ class MqttToolApp:
         log_vscroll = ttk.Scrollbar(log_text_wrap, orient=tk.VERTICAL, command=self.log.yview)
         self.log.configure(yscrollcommand=log_vscroll.set)
         self.log.tag_configure("log_hit", background="#FEF3C7")
+        self.log.tag_configure("log_ok", foreground=C["success"])
+        self.log.tag_configure("log_err", foreground=C["error"])
+        self.log.tag_configure("log_info", foreground=C["text"])
+        self.log.tag_configure("log_detail", foreground=C["muted"])
+        self.log.tag_configure("log_sep", foreground=C["border"])
         self.log.pack(side=tk.LEFT, fill=tk.X, expand=True)
         log_vscroll.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -1577,6 +1686,76 @@ class MqttToolApp:
         self._history_widgets[key] = combo
         self._bind_history_combo(combo, key)
         return combo
+
+    def _host_label(self, host):
+        host = (host or "").strip()
+        if not host:
+            return ""
+        alias = (self.history.get("host_alias") or {}).get(host, "").strip()
+        return ("%s · %s" % (alias, host)) if alias else host
+
+    def _resolve_host(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        if " · " in value:
+            return value.rsplit(" · ", 1)[-1].strip()
+        return value
+
+    def _refresh_host_combo(self, keep_host=None):
+        combo = self._history_widgets.get("host")
+        if not combo:
+            return
+        hosts = list(self.history.get("host") or [])
+        labels = [self._host_label(h) for h in hosts]
+        combo.configure(values=labels)
+        target = keep_host or self._resolve_host(combo.get())
+        if target and target in hosts:
+            combo.set(self._host_label(target))
+        elif labels:
+            combo.set(labels[0])
+
+    def _add_host_field(self, parent, default):
+        _field_label(parent, "Host")
+        row = tk.Frame(parent, bg=C["surface"])
+        row.pack(fill=tk.X, pady=(0, 10))
+        hosts = self.history.get("host") or [default]
+        labels = [self._host_label(h) for h in hosts]
+        combo = ttk.Combobox(row, values=labels, font=C["ui"])
+        combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        combo.set(labels[0] if labels else default)
+        _flat_btn(row, "别名", self._set_host_alias, variant="ghost", padx=8, pady=4).pack(side=tk.RIGHT, padx=(6, 0))
+        del_btn = _flat_btn(row, "×", lambda: self._delete_history("host"), variant="ghost", padx=6, pady=4)
+        del_btn.pack(side=tk.RIGHT, padx=(6, 0))
+        del_btn.configure(width=2, font=("Segoe UI", 11))
+        self._history_widgets["host"] = combo
+        self._bind_history_combo(combo, "host")
+        return combo
+
+    def _set_host_alias(self):
+        host = self._resolve_host(self.host.get())
+        if not host:
+            messagebox.showinfo("提示", "请先选择或输入 Host", parent=self.root)
+            return
+        current = (self.history.get("host_alias") or {}).get(host, "")
+        alias = simpledialog.askstring(
+            "Host 别名",
+            "为 %s 设置别名（留空则清除）" % host,
+            initialvalue=current,
+            parent=self.root,
+        )
+        if alias is None:
+            return
+        alias = alias.strip()
+        if "host_alias" not in self.history or not isinstance(self.history["host_alias"], dict):
+            self.history["host_alias"] = {}
+        if alias:
+            self.history["host_alias"][host] = alias
+        elif host in self.history["host_alias"]:
+            del self.history["host_alias"][host]
+        self._remember("host", host)
+        self._refresh_host_combo(keep_host=host)
+        self._append_log("Host 别名已更新: %s" % self._host_label(host))
 
     def _on_tab_content_change(self):
         tab = self.active_tab()
@@ -1782,7 +1961,7 @@ class MqttToolApp:
         raw = tab.get_raw_text()
         title = tab.title
         conn = {
-            "host": self.host.get().strip(),
+            "host": self._resolve_host(self.host.get()),
             "port": self.port.get().strip(),
             "user": self.user.get().strip(),
             "pwd": self.pwd.get(),
@@ -1819,7 +1998,80 @@ class MqttToolApp:
         win.destroy()
 
     def _open_log_viewer(self):
-        LogViewerDialog(self.root, self)
+        viewer = getattr(self, "_log_viewer", None)
+        try:
+            if viewer is not None and viewer.winfo_exists():
+                viewer.lift()
+                viewer.focus_force()
+                viewer._reload()
+                return
+        except tk.TclError:
+            pass
+        self._log_viewer = LogViewerDialog(self.root, self)
+        self._log_viewer.bind("<Destroy>", lambda _e: setattr(self, "_log_viewer", None))
+
+    def _show_toast(self, message, kind="info", duration=2600):
+        if self._toast_job:
+            try:
+                self.root.after_cancel(self._toast_job)
+            except tk.TclError:
+                pass
+            self._toast_job = None
+        if self._toast_win:
+            try:
+                if self._toast_win.winfo_exists():
+                    self._toast_win.destroy()
+            except tk.TclError:
+                pass
+            self._toast_win = None
+        styles = {
+            "ok": (C["success_bg"], C["success"], C["success"]),
+            "err": (C["error_bg"], C["error"], C["error"]),
+            "info": (C["accent_soft"], C["text"], C["accent"]),
+        }
+        bg, fg, border = styles.get(kind, styles["info"])
+        win = tk.Toplevel(self.root)
+        win.overrideredirect(True)
+        try:
+            win.attributes("-topmost", True)
+        except tk.TclError:
+            pass
+        shell = tk.Frame(win, bg=border)
+        shell.pack(padx=1, pady=1)
+        inner = tk.Frame(shell, bg=bg, padx=16, pady=10)
+        inner.pack()
+        tk.Label(inner, text=message, font=C["ui_bold"], fg=fg, bg=bg, justify=tk.LEFT).pack()
+        win.update_idletasks()
+        tw = win.winfo_reqwidth()
+        th = win.winfo_reqheight()
+        x = self.root.winfo_rootx() + max(self.root.winfo_width() - tw - 24, 8)
+        y = self.root.winfo_rooty() + max(self.root.winfo_height() - th - 72, 8)
+        win.geometry("+%d+%d" % (x, y))
+        self._toast_win = win
+
+        def _hide():
+            try:
+                if self._toast_win and self._toast_win.winfo_exists():
+                    self._toast_win.destroy()
+            except tk.TclError:
+                pass
+            self._toast_win = None
+            self._toast_job = None
+
+        self._toast_job = self.root.after(duration, _hide)
+
+    def _refresh_log_display(self):
+        try:
+            self.log.see("1.0")
+            self.log.update_idletasks()
+        except tk.TclError:
+            pass
+        viewer = getattr(self, "_log_viewer", None)
+        try:
+            if viewer is not None and viewer.winfo_exists():
+                viewer._reload()
+        except tk.TclError:
+            self._log_viewer = None
 
     def _log_clear_hits(self):
         self.log.tag_remove("log_hit", "1.0", tk.END)
@@ -1912,6 +2164,7 @@ class MqttToolApp:
     def _load_history(self):
         defaults = {
             "host": ["192.168.110.19"],
+            "host_alias": {},
             "port": ["1883"],
             "user": ["test"],
             "topic": ["cloud/TD0TD204FC3T9751"],
@@ -1922,6 +2175,11 @@ class MqttToolApp:
                     data = json.load(f)
                 if isinstance(data, dict):
                     for key, seed in defaults.items():
+                        if key == "host_alias":
+                            raw = data.get(key)
+                            if isinstance(raw, dict):
+                                defaults[key] = {str(k): str(v) for k, v in raw.items() if str(k).strip() and str(v).strip()}
+                            continue
                         items = data.get(key)
                         if isinstance(items, list) and items:
                             defaults[key] = [str(x) for x in items if str(x).strip()]
@@ -1937,6 +2195,8 @@ class MqttToolApp:
         value = (value or "").strip()
         if not value:
             return
+        if key == "host":
+            value = self._resolve_host(value)
         items = list(self.history.get(key) or [])
         if value in items:
             items.remove(value)
@@ -1944,10 +2204,13 @@ class MqttToolApp:
         self.history[key] = items[:50]
         combo = self._history_widgets.get(key)
         if combo:
-            current = combo.get()
-            combo.configure(values=self.history[key])
-            if combo.get() != current:
-                combo.set(current)
+            if key == "host":
+                self._refresh_host_combo(keep_host=value)
+            else:
+                current = combo.get()
+                combo.configure(values=self.history[key])
+                if combo.get() != current:
+                    combo.set(current)
         self._persist_history()
 
     def _delete_history(self, key):
@@ -1955,6 +2218,19 @@ class MqttToolApp:
         if not combo:
             return
         value = combo.get().strip()
+        if key == "host":
+            host = self._resolve_host(value)
+            items = list(self.history.get(key) or [])
+            if host in items:
+                items.remove(host)
+                self.history[key] = items
+                aliases = self.history.get("host_alias") or {}
+                if host in aliases:
+                    del aliases[host]
+                self._persist_history()
+                self._refresh_host_combo(keep_host=items[0] if items else None)
+                self._append_log("已删除历史: " + self._host_label(host))
+            return
         items = list(self.history.get(key) or [])
         if value in items:
             items.remove(value)
@@ -2058,10 +2334,34 @@ class MqttToolApp:
             self.topic.insert(0, new_topic)
             self._remember("topic", new_topic)
 
-    def _append_log(self, msg):
+    def _append_log(self, msg, level=None, detail=None):
+        if level is None:
+            if msg.startswith("发送成功"):
+                level = "ok"
+            elif "失败" in msg or "无效" in msg:
+                level = "err"
+            else:
+                level = "info"
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
+        badges = {"ok": "成功", "err": "错误", "info": "信息", "warn": "警告"}
+        badge = badges.get(level, "信息")
+        tag = "log_ok" if level == "ok" else ("log_err" if level == "err" else "log_info")
+        lines = [
+            ("", None),
+            ("─" * 58, "log_sep"),
+            ("%s    %-4s    %s" % (ts, badge, msg), tag),
+        ]
+        if detail:
+            text = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, indent=2)
+            for dl in text.splitlines():
+                lines.append(("    " + dl, "log_detail"))
         self.log.configure(state=tk.NORMAL)
-        self.log.insert(tk.END, msg + "\n")
-        self.log.see(tk.END)
+        for content, line_tag in reversed(lines):
+            if line_tag:
+                self.log.insert("1.0", content + "\n", line_tag)
+            else:
+                self.log.insert("1.0", content + "\n")
+        self.log.see("1.0")
         self.log.configure(state=tk.DISABLED)
         self._log_clear_hits()
 
@@ -2083,17 +2383,17 @@ class MqttToolApp:
         except ValueError as e:
             self._append_log(str(e))
             return
-        host = self.host.get().strip()
+        host = self._resolve_host(self.host.get())
         topic = self.topic.get().strip()
         user = self.user.get().strip()
         pwd = self.pwd.get()
         try:
             port = int(self.port.get().strip())
         except ValueError:
-            self._append_log("Port 必须是数字")
+            self._append_log("Port 必须是数字", level="err")
             return
         if not host or not topic:
-            self._append_log("Host / 主题不能为空")
+            self._append_log("Host / 主题不能为空", level="err")
             return
         self._remember("host", host)
         self._remember("port", str(port))
@@ -2101,7 +2401,7 @@ class MqttToolApp:
         self._remember("topic", topic)
         btn = done_btn or self.send_btn
         btn.configure(state=tk.DISABLED)
-        self._append_log("正在发送 [%s] -> %s  %s" % (title, host, topic))
+        self._append_log("正在发送 [%s] -> %s  %s" % (title, self._host_label(host), topic))
         threading.Thread(
             target=self._do_send,
             args=(host, port, topic, user, pwd, body, tab, self.auto_sign.get(), self.auto_trigger_time.get(), btn),
@@ -2134,13 +2434,20 @@ class MqttToolApp:
     def _on_send_done(self, ok, tab, detail, pretty=None, done_btn=None):
         btn = done_btn or self.send_btn
         btn.configure(state=tk.NORMAL)
+        title = getattr(tab, "title", "窗口") if tab else "窗口"
         if ok:
             if pretty and tab:
                 tab.fill(json.loads(pretty))
-            self._append_log("发送成功")
-            self._append_log(detail)
+                tab._set_status("发送成功", "ok")
+            self._append_log("发送成功", level="ok", detail=pretty or detail)
+            self._refresh_log_display()
+            self._show_toast("「%s」发送成功" % title, kind="ok")
         else:
-            self._append_log("发送失败: " + detail)
+            if tab:
+                tab._set_status("发送失败", "err")
+            self._append_log("发送失败: " + detail, level="err")
+            self._refresh_log_display()
+            self._show_toast("发送失败: %s" % detail, kind="err")
 
 
 if __name__ == "__main__":
