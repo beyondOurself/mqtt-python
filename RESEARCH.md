@@ -37,7 +37,7 @@
 ## 五、风险与约束
 
 - 源码曾硬编码测试账号口令，禁止再入库、禁止写进文档。
-- `md5sign` 把 `timestamp` 设为当前毫秒减 4 分钟，与现网校验对齐，勿擅自改偏移。
+- `md5sign` 默认 `timestamp = 当前毫秒`；GUI 提供「timestamp 偏移(分钟)」可正可负。
 - 仅发布、不订阅；QoS/TLS 未做。
 - Windows 为主；依赖 `paho-mqtt` + 标准库 Tkinter。
 

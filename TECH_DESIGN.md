@@ -56,14 +56,14 @@ mqtt-python/
 
 JSON 对象，常见字段：`name`、`sn`、`muid`、`timestamp`、`version`、`data`、`sign`，banner 另有 `operator`。
 
-### `md5sign(value: dict) -> str`
+### `md5sign(value: dict, offset_ms: int = 0) -> str`
 
-1. `timestamp = str(int(time.time() * 1000 - 1000 * 60 * 4))` 写入 `value`
+1. `timestamp = str(int(time.time() * 1000 + offset_ms))` 写入 `value`
 2. 顶层 `dict(sorted(items))`
 3. `json.dumps(..., ensure_ascii=False, separators=(',', ':'))`
 4. UTF-8 MD5 hex
 
-发送前若勾选自动签名：先 `pop('sign')`，再写 `muid`，再 `md5sign`。
+发送前若勾选自动签名：先 `pop('sign')`，再写 `muid`，再 `md5sign(..., offset_ms)`；GUI「timestamp 偏移(分钟)」×60000 为 `offset_ms`。
 
 ### 发布
 
@@ -161,7 +161,7 @@ JSON 对象，常见字段：`name`、`sn`、`muid`、`timestamp`、`version`、
 
 | 点 | 决策 | 回退 |
 |----|------|------|
-| 签名偏移 4 分钟 | 对齐现网，禁止改默认 | 仅当服务端规则变更 |
+| 签名 timestamp | 默认当前毫秒；GUI 可填偏移分钟 | 旧行为填 `-4` |
 | UI 线程 | 发送进 daemon Thread，结果 `root.after` | 禁止在主线程 `connect` |
 | sn ↔ topic | 主题 `rsplit('/', 1)` 末段 | 无 `/` 则整段当 sn |
 | 打包 | `console=False` | 调试可临时 `True` |

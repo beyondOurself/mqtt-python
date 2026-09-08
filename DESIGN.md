@@ -94,9 +94,15 @@ Internal Windows desktop client for 博享家 device uplink JSON. **主窗**：�
 - 主窗内嵌 height=6，`wrap=WORD`，纵向滚动条
 - 搜索 +「放大查看」打开 `LogViewerDialog`
 
+### Action Card
+
+- 第 1 行：发送按钮独占
+- 第 2 行起：勾选项 + timestamp 偏移，`_FlowFrame` 按宽度自动换行
+
 ### Checkboxes
 
 - 自动 muid + sign；触发时间取当前；sn 跟随主题（默认开）
+- timestamp 偏移(分钟)：`−` / Entry / `+` 步进 1；默认 `0`，可为负；签名时 `当前毫秒 + 偏移×60×1000`
 - 密码「显示」Checkbutton
 
 ## Do's and Don'ts

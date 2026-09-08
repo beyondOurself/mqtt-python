@@ -268,6 +268,51 @@ def _card(parent, pad=16, fill=tk.X, expand=False, accent=False):
     return wrap, inner
 
 
+class _FlowFrame(tk.Frame):
+    def __init__(self, parent, bg, gap_x=16, gap_y=8, **kw):
+        tk.Frame.__init__(self, parent, bg=bg, **kw)
+        self._bg = bg
+        self._gap_x = gap_x
+        self._gap_y = gap_y
+        self._items = []
+        self._busy = False
+        self.pack_propagate(False)
+        self.bind("<Configure>", self._reflow)
+
+    def add(self, widget):
+        self._items.append(widget)
+        widget.place(x=0, y=0)
+        self.after_idle(self._reflow)
+
+    def _reflow(self, event=None):
+        if self._busy:
+            return
+        width = self.winfo_width()
+        if width <= 1:
+            return
+        self._busy = True
+        try:
+            x = 0
+            y = 0
+            row_h = 0
+            for widget in self._items:
+                widget.update_idletasks()
+                iw = widget.winfo_reqwidth()
+                ih = widget.winfo_reqheight()
+                if x > 0 and x + iw > width:
+                    x = 0
+                    y += row_h + self._gap_y
+                    row_h = 0
+                widget.place(x=x, y=y)
+                x += iw + self._gap_x
+                row_h = max(row_h, ih)
+            need_h = max(y + row_h, 1)
+            if int(self.cget("height") or 0) != need_h:
+                self.configure(height=need_h)
+        finally:
+            self._busy = False
+
+
 def _section_head(parent, title, subtitle=None, icon=None):
     head = tk.Frame(parent, bg=C["surface"])
     head.pack(fill=tk.X, pady=(0, 12))
@@ -1334,6 +1379,7 @@ class MqttToolApp:
                 "auto_trigger_time": bool(self.auto_trigger_time.get()),
                 "sync_sn": bool(self.sync_sn.get()),
                 "pwd_show": bool(self.pwd_show.get()),
+                "timestamp_offset_min": self.timestamp_offset_min.get().strip(),
             },
             "template": self.template_combo.get().strip(),
             "tab_counter": self._tab_counter,
@@ -1355,6 +1401,7 @@ class MqttToolApp:
         self.auto_trigger_time.set(opts.get("auto_trigger_time", True))
         self.sync_sn.set(opts.get("sync_sn", True))
         self.pwd_show.set(opts.get("pwd_show", False))
+        self.timestamp_offset_min.set(str(opts.get("timestamp_offset_min", "0")))
         self._toggle_pwd()
         tpl = (session.get("template") or "").strip()
         if tpl and tpl in self.templates:
@@ -1613,14 +1660,19 @@ class MqttToolApp:
         self.auto_sign = tk.BooleanVar(value=True)
         self.auto_trigger_time = tk.BooleanVar(value=True)
         self.sync_sn = tk.BooleanVar(value=True)
-        opts = tk.Frame(act, bg=C["surface"])
-        opts.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.timestamp_offset_min = tk.StringVar(value="0")
+        btn_row = tk.Frame(act, bg=C["surface"])
+        btn_row.pack(fill=tk.X)
+        self.send_btn = _flat_btn(btn_row, "发送当前窗口", self._send, variant="primary", icon=IC["send"], padx=22, pady=10)
+        self.send_btn.pack(side=tk.RIGHT)
+        opts = _FlowFrame(act, bg=C["surface"], gap_x=18, gap_y=8)
+        opts.pack(fill=tk.X, pady=(12, 0))
         for text, var in (
             ("自动 muid + sign", self.auto_sign),
             ("触发时间取当前", self.auto_trigger_time),
             ("sn 跟随主题", self.sync_sn),
         ):
-            tk.Checkbutton(
+            cb = tk.Checkbutton(
                 opts,
                 text=text,
                 variable=var,
@@ -1629,9 +1681,14 @@ class MqttToolApp:
                 activebackground=C["surface"],
                 selectcolor=C["accent_soft"],
                 font=C["ui"],
-            ).pack(side=tk.LEFT, padx=(0, 18))
-        self.send_btn = _flat_btn(act, "发送当前窗口", self._send, variant="primary", icon=IC["send"], padx=22, pady=10)
-        self.send_btn.pack(side=tk.RIGHT)
+            )
+            opts.add(cb)
+        offset_box = tk.Frame(opts, bg=C["surface"])
+        tk.Label(offset_box, text="timestamp 偏移(分钟)", font=C["ui"], fg=C["muted"], bg=C["surface"]).pack(side=tk.LEFT, padx=(0, 6))
+        _flat_btn(offset_box, "−", lambda: self._nudge_timestamp_offset(-1), variant="outline", padx=8, pady=2).pack(side=tk.LEFT, padx=(0, 4))
+        ttk.Entry(offset_box, textvariable=self.timestamp_offset_min, font=C["ui"], width=6).pack(side=tk.LEFT)
+        _flat_btn(offset_box, "+", lambda: self._nudge_timestamp_offset(1), variant="outline", padx=8, pady=2).pack(side=tk.LEFT, padx=(4, 0))
+        opts.add(offset_box)
 
         log_wrap, log_box = _card(main, pad=12, accent=True)
         log_wrap.pack(fill=tk.X)
@@ -2366,6 +2423,17 @@ class MqttToolApp:
         self.log.configure(state=tk.DISABLED)
         self._log_clear_hits()
 
+    def _nudge_timestamp_offset(self, delta):
+        try:
+            cur = float(self.timestamp_offset_min.get().strip() or "0")
+        except ValueError:
+            cur = 0.0
+        nxt = cur + delta
+        if nxt == int(nxt):
+            self.timestamp_offset_min.set(str(int(nxt)))
+        else:
+            self.timestamp_offset_min.set(str(nxt))
+
     def _send(self):
         tab = self.active_tab()
         if tab:
@@ -2403,13 +2471,19 @@ class MqttToolApp:
         btn = done_btn or self.send_btn
         btn.configure(state=tk.DISABLED)
         self._append_log("正在发送 [%s] -> %s  %s" % (title, self._host_label(host), topic))
+        try:
+            offset_min = float(self.timestamp_offset_min.get().strip() or "0")
+        except ValueError:
+            btn.configure(state=tk.NORMAL)
+            self._append_log("timestamp 偏移必须是数字（分钟，可为负）", level="err")
+            return
         threading.Thread(
             target=self._do_send,
-            args=(host, port, topic, user, pwd, body, tab, self.auto_sign.get(), self.auto_trigger_time.get(), btn),
+            args=(host, port, topic, user, pwd, body, tab, self.auto_sign.get(), self.auto_trigger_time.get(), offset_min, btn),
             daemon=True,
         ).start()
 
-    def _do_send(self, host, port, topic, user, pwd, body, tab, auto_sign, auto_trigger_time, done_btn=None):
+    def _do_send(self, host, port, topic, user, pwd, body, tab, auto_sign, auto_trigger_time, offset_min=0, done_btn=None):
         try:
             payload = json.loads(json.dumps(body, ensure_ascii=False))
             if auto_trigger_time:
@@ -2423,7 +2497,7 @@ class MqttToolApp:
             if auto_sign:
                 payload.pop("sign", None)
                 payload["muid"] = str(uuid.uuid1())
-                payload["sign"] = md5sign(payload)
+                payload["sign"] = md5sign(payload, offset_ms=int(offset_min * 60 * 1000))
             message = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
             Mqttpub(host, topic, port).clicent_main(message, user, pwd)
             pretty = json.dumps(payload, ensure_ascii=False, indent=2)

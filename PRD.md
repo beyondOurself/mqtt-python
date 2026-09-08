@@ -71,7 +71,7 @@ _产品负责人：内部联调_
 ## 六、技术与数据要求
 
 - Python 3 + Tkinter + paho-mqtt
-- 签名：顶层 key 排序后紧凑 JSON，UTF-8 MD5；`timestamp` 为当前毫秒 − 240000
+- 签名：顶层 key 排序后紧凑 JSON，UTF-8 MD5；`timestamp` 默认当前毫秒，GUI 可按分钟增减偏移
 - 发出 JSON：`ensure_ascii=False`，`separators=(',', ':')`
 - 主题惯例：`cloud/{sn}`
 

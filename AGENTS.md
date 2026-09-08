@@ -16,7 +16,7 @@
 - 主路径：`mqtt_gui.py`、`mqtt_publish.py`、`md5tool.py`。
 - Windows：Shell 用 PowerShell；路径用完整 Windows 路径或仓库相对路径。
 - 禁止提交 broker 口令、证书、`.env`。Password 不得写入 `history.json`，不得写进文档示例。
-- `md5sign` 的 timestamp 偏移（−4 分钟）与排序+紧凑 JSON 规则禁止无需求改动。
+- `md5sign` 的 timestamp 默认当前毫秒；偏移由界面「timestamp 偏移(分钟)」传入。排序+紧凑 JSON 规则禁止无需求改动。
 - **环境**：优先 `run.bat` / `dev.bat`；改依赖同步 `requirements.txt` 与 `setup_env.py` 校验项。
 - **Tkinter**：`Frame` 勿用 tuple 作 `padx`/`pady` 构造参数；多 `Listbox` 设 `exportselection=False`。
 - **模版弹窗**：保存右侧 JSON 与「从当前窗口保存」语义分离；切换模版才提示未保存。
