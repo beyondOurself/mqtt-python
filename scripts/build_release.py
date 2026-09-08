@@ -75,6 +75,23 @@ def _copy_if_exists(name, dist_dir):
         shutil.copy2(src, os.path.join(dist_dir, name))
 
 
+def _prune_spec_files(keep=2):
+    prefix = APP_NAME + "_"
+    specs = []
+    for name in os.listdir(ROOT):
+        if name.startswith(prefix) and name.endswith(".spec"):
+            path = os.path.join(ROOT, name)
+            if os.path.isfile(path):
+                specs.append(path)
+    specs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+    for path in specs[keep:]:
+        try:
+            os.remove(path)
+            print("已删除旧 spec:", os.path.basename(path))
+        except OSError as e:
+            print("删除 spec 失败 %s: %s" % (path, e), file=sys.stderr)
+
+
 def main():
     os.chdir(ROOT)
     version_path = os.path.join(ROOT, "version.json")
@@ -102,6 +119,7 @@ def main():
         "launch.py",
     ]
     subprocess.run(cmd, check=True)
+    _prune_spec_files(keep=2)
 
     dist_dir = os.path.join(ROOT, "dist")
     _copy_if_exists("templates.json", dist_dir)
