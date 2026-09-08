@@ -296,7 +296,7 @@ def _bind_text_shortcuts(text, on_after_paste=None):
     text.bind("<Button-3>", _popup_menu)
 
 
-def _scrollable_frame(parent, width=None, bg=None):
+def _scrollable_frame(parent, width=None, bg=None, fill_min_height=False):
     bg = bg or C["canvas"]
     wrap = tk.Frame(parent, bg=bg)
     canvas = tk.Canvas(wrap, bg=bg, highlightthickness=0, borderwidth=0)
@@ -309,8 +309,13 @@ def _scrollable_frame(parent, width=None, bg=None):
     def _sync_scroll(_event=None):
         canvas.configure(scrollregion=canvas.bbox("all"))
 
-    def _sync_width(event):
+    def _sync_canvas(event):
         canvas.itemconfigure(inner_id, width=event.width)
+        if fill_min_height:
+            inner.update_idletasks()
+            need = max(inner.winfo_reqheight(), event.height)
+            canvas.itemconfigure(inner_id, height=need)
+        _sync_scroll()
 
     def _wheel(event):
         canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
@@ -322,7 +327,7 @@ def _scrollable_frame(parent, width=None, bg=None):
         canvas.unbind_all("<MouseWheel>")
 
     inner.bind("<Configure>", _sync_scroll)
-    canvas.bind("<Configure>", _sync_width)
+    canvas.bind("<Configure>", _sync_canvas)
     canvas.bind("<Enter>", _bind_wheel)
     canvas.bind("<Leave>", _unbind_wheel)
     canvas.configure(yscrollcommand=vsb.set)

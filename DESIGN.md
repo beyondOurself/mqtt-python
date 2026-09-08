@@ -43,7 +43,7 @@ Internal Windows desktop client for 博享家 device uplink JSON. **主窗**：�
 
 | 窗口 | 默认几何 | 最小 | 初始化 |
 |------|----------|------|--------|
-| 主窗 | 1100×920（fallback） | 900×680 | `_fit_initial_window` 按内容 + 屏幕居中 |
+| 主窗 | 1100×920（fallback） | 760×520 | `_fit_initial_window` 按内容 + 屏幕居中；右侧主栏 `_scrollable_frame` 可纵向滚 |
 | 模版管理 | 980×720 | 760×560 | 相对主窗居中，左侧列表区可滚动 |
 | 运行日志 | 860×560 | 640×400 | 固定 |
 
@@ -72,6 +72,11 @@ Internal Windows desktop client for 博享家 device uplink JSON. **主窗**：�
 
 - 连接卡片 + 模版卡片，整栏 `_scrollable_frame` 可纵向滚
 - 模版行：Combobox +「应用到当前窗口」+ 新增 / 管理
+
+### Main Panel（主窗右侧）
+
+- `_scrollable_frame(fill_min_height=True)`：矮屏可滚到发送区/日志；高屏内容仍铺满
+- 最小窗口 760×520
 
 ### Payload Tabs
 

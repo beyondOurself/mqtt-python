@@ -92,6 +92,70 @@ def _prune_spec_files(keep=2):
             print("删除 spec 失败 %s: %s" % (path, e), file=sys.stderr)
 
 
+def _desktop_dir():
+    home = os.path.expanduser("~")
+    for name in ("Desktop", "桌面"):
+        path = os.path.join(home, name)
+        if os.path.isdir(path):
+            return path
+    public = os.path.join(os.environ.get("PUBLIC", r"C:\Users\Public"), "Desktop")
+    if os.path.isdir(public):
+        return public
+    return os.path.join(home, "Desktop")
+
+
+def _create_desktop_shortcut(exe_path):
+    if os.name != "nt":
+        return
+    desktop = _desktop_dir()
+    if not os.path.isdir(desktop):
+        print("未找到桌面目录，跳过快捷方式", file=sys.stderr)
+        return
+    keep_name = APP_NAME + ".lnk"
+    keep_path = os.path.join(desktop, keep_name)
+    for name in os.listdir(desktop):
+        if not name.endswith(".lnk"):
+            continue
+        if name == keep_name or name.startswith(APP_NAME):
+            path = os.path.join(desktop, name)
+            if path == keep_path:
+                continue
+            try:
+                os.remove(path)
+                print("已删除旧快捷方式:", name)
+            except OSError as e:
+                print("删除快捷方式失败 %s: %s" % (name, e), file=sys.stderr)
+
+    exe_path = os.path.abspath(exe_path)
+    work_dir = os.path.dirname(exe_path)
+    ps = (
+        "$s = (New-Object -ComObject WScript.Shell).CreateShortcut(%s); "
+        "$s.TargetPath = %s; "
+        "$s.WorkingDirectory = %s; "
+        "$s.Description = %s; "
+        "$s.Save()"
+    ) % (
+        _ps_quote(keep_path),
+        _ps_quote(exe_path),
+        _ps_quote(work_dir),
+        _ps_quote(APP_NAME),
+    )
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        err = (r.stderr or r.stdout or "").strip()
+        print("创建桌面快捷方式失败: %s" % err, file=sys.stderr)
+        return
+    print("桌面快捷方式:", keep_path)
+
+
+def _ps_quote(s):
+    return "'%s'" % str(s).replace("'", "''")
+
+
 def main():
     os.chdir(ROOT)
     version_path = os.path.join(ROOT, "version.json")
@@ -129,6 +193,8 @@ def main():
     with open(BUILD_OUT, "w", encoding="utf-8") as f:
         f.write(out_exe)
     print(out_exe)
+    if os.path.isfile(out_exe):
+        _create_desktop_shortcut(out_exe)
     return 0
 
 

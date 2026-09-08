@@ -47,7 +47,7 @@ class MqttToolApp:
         self._window_subtitle = window_subtitle
         self.root.title("MQTT 发送工具 %s" % app_version_title())
         self.root.geometry("1100x920")
-        self.root.minsize(900, 680)
+        self.root.minsize(760, 520)
         self.root.configure(bg=C["canvas"])
 
         self._tab_counter = 0
@@ -105,13 +105,15 @@ class MqttToolApp:
         req_h = max(self.root.winfo_reqheight(), 760)
         w = min(req_w + 32, sw - 24)
         h = min(req_h + 40, sh - 48)
-        w = max(w, 900)
-        h = max(h, 680)
+        w = max(w, 760)
+        h = max(h, 520)
         x = max(0, (sw - w) // 2)
         y = max(0, (sh - h) // 2)
         self.root.geometry("%dx%d+%d+%d" % (w, h, x, y))
         if getattr(self, "_sidebar_canvas", None):
             self._sidebar_canvas.configure(scrollregion=self._sidebar_canvas.bbox("all"))
+        if getattr(self, "_main_canvas", None):
+            self._main_canvas.configure(scrollregion=self._main_canvas.bbox("all"))
 
     def _load_session(self):
         if not os.path.isfile(self.session_path):
@@ -372,8 +374,8 @@ class MqttToolApp:
         _flat_btn(row_tpl, "新增", self._create_template_quick, variant="outline", icon=IC["add"], padx=10).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
         _flat_btn(row_tpl, "管理", self._open_template_manager, variant="secondary", icon=IC["manage"], padx=10).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
 
-        main = tk.Frame(body, bg=C["canvas"])
-        main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        main_scroll, main, self._main_canvas = _scrollable_frame(body, bg=C["canvas"], fill_min_height=True)
+        main_scroll.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         payload_wrap, payload = _card(main, pad=14, fill=tk.BOTH, expand=True)
         payload_wrap.pack(fill=tk.BOTH, expand=True, pady=(0, 12))
