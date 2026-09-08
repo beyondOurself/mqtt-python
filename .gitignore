@@ -1,0 +1,16 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*.log
+*.tmp
+*.local
+.idea/
+.vscode/
+.venv/
+venv/
+env/
+build/
+dist/
+*.exe
+history.json
+.commit_msg.txt
